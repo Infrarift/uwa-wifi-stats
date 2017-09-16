@@ -24,7 +24,7 @@ Date:                18/9/2017
 
 #define V_COUNT 25000
 #define V_NAME_LENGTH 100
-#define V_ADDRESS_LENGTH 10
+#define V_ADDRESS_LENGTH 20
 #define OUTPUT_COUNT 500
 #define OUTPUT_LENGTH 200
 
@@ -110,14 +110,15 @@ void Trim(char* target_string)
 	}
 }
 
-void CopyOutputToFile(char out_lines[OUTPUT_COUNT][OUTPUT_LENGTH], int line_index)
+void CopyOutputToFile(char out_lines[OUTPUT_COUNT][OUTPUT_LENGTH])
 {
 	// Write the results to a file, so that we can sort it using /usr/bin/sort.
 	FILE* fp_out = fopen(TEMP_COPY_FILE_NAME, "w");
 	if (fp_out != NULL)
 	{
-		for (int f = 0; f < line_index; f++)
-			fputs(out_lines[f], fp_out);
+		int i = 0;
+		while (*out_lines[i] != NULL_CHAR)
+			fputs(out_lines[i++], fp_out);
 		fclose(fp_out);
 	}
 }
@@ -133,13 +134,13 @@ void SortResults(int vendor_count)
 		if (vendor_count == 0)
 		{
 			// No vendor names: Sort by package size in descending numerical order. 
-			char* exe_argv[] = {"sort", TEMP_COPY_FILE_NAME, "-n", "-k2", "-r", NULL};
+			char* exe_argv[] = {"sort", TEMP_COPY_FILE_NAME, "-k2nr", NULL};
 			execve("/usr/bin/sort", exe_argv, environ);
 		}
 		else
 		{
 			// With vendor name: Sort by package size first, then by vendor name on alphabetical order.
-			char* exe_argv[] = {"sort", TEMP_COPY_FILE_NAME, "-k3,3nr", "-k2,2", NULL};
+			char* exe_argv[] = {"sort", "-t\t", "-k3nr", "-k2", TEMP_COPY_FILE_NAME, NULL};
 			execve("/usr/bin/sort", exe_argv, environ);
 		}
 	}
@@ -201,13 +202,21 @@ char* AddTabToOutput(char* str)
 	return ++str;
 }
 
+void AddLineEnding(char** output_pointer)
+{
+	// Add a new line char, and a null char to this string.
+	**output_pointer = '\n';
+	**output_pointer++;
+	**output_pointer = NULL_CHAR;
+}
+
 void ProcessSimplePackage(char* package_size, char* full_address, char** output_pointer)
 {
 	// Format a single line of a package, without vendor name.
 	*output_pointer = CopyStringToOutput(full_address, *output_pointer);
 	*output_pointer = AddTabToOutput(*output_pointer);
 	*output_pointer = CopyStringToOutput(package_size, *output_pointer);
-	**output_pointer = NULL_CHAR;
+	AddLineEnding(output_pointer);
 }
 
 void ProcessNamedPackage(char* package_size, char* vendor_name, char partial_address[9], char** output_pointer)
@@ -219,19 +228,40 @@ void ProcessNamedPackage(char* package_size, char* vendor_name, char partial_add
 	*output_pointer = CopyStringToOutput(vendor_name, *output_pointer);
 	*output_pointer = AddTabToOutput(*output_pointer);
 	*output_pointer = CopyStringToOutput(package_size, *output_pointer);
-	**output_pointer = NULL_CHAR;
+	AddLineEnding(output_pointer);
 }
 
-int ProcessInputFile(
-	// Read all the lines from the input file. Format those lines to spec, and then output it into the target array.
-	char* file_name,
-	char device_type,
-	char out_lines[OUTPUT_COUNT][OUTPUT_LENGTH],
-	int vendor_count,
-	char vendor_addresses[V_COUNT][V_ADDRESS_LENGTH],
-	char vendor_names[V_COUNT][V_NAME_LENGTH])
+void AddToOutputAddress(char* full_address, int package_size, char output_address[OUTPUT_COUNT][V_ADDRESS_LENGTH], int output_package[OUTPUT_COUNT])
 {
-	int line_index = 0;
+	// Process a new packet-info line, either adding it to an existing one, or appending a new one to the array.
+	for (int i = 0; i < OUTPUT_COUNT; i++)
+	{
+		char* address = output_address[i];
+		if (*address == NULL_CHAR)
+		{
+			strcpy(output_address[i], full_address);
+			output_package[i] += package_size;
+			break;
+		}
+
+		if (Compare(address, full_address) == true)
+		{
+			output_package[i] += package_size;
+			break;
+		}
+	}
+}
+
+void SumInputPackets(char* file_name, char device_type, int vendor_count, char output_address[OUTPUT_COUNT][V_ADDRESS_LENGTH], int output_size[OUTPUT_COUNT])
+{
+	// Initialize all address and packet size values to default.
+	for (int i = 0; i < OUTPUT_COUNT; i++)
+	{
+		output_address[i][0] = NULL_CHAR;
+		output_size[i] = 0;
+	}
+
+	// Read each line in the file and sum the input size to the vendor address.
 	FILE* file = fopen(file_name, "r");
 	char line[OUTPUT_LENGTH];
 	while (fgets(line, sizeof line, file) != NULL)
@@ -243,49 +273,79 @@ int ProcessInputFile(
 		char* package_size = array[3];
 
 		char* full_address = device_type == TRANSMIT_DEVICE ? transmit_address : receive_address;
-		char* vendor_name = GetVendorName(full_address, vendor_count, vendor_addresses, vendor_names);
-
 		if (Compare(full_address, BROADCAST_ADDRESS) == true)
-		{
-			line_index++;
 			continue;
+
+		// If we have vendor names, use the partial address. Otherwise use the full address.
+		if (vendor_count != 0)
+		{
+			char partial_address[9];
+			GetVendorAddress(full_address, partial_address, false);
+			full_address = partial_address;
 		}
 
-		char partial_address[9];
-		GetVendorAddress(full_address, partial_address, false);
+		AddToOutputAddress(full_address, atoi(package_size), output_address, output_size);
+	}
+}
+
+int ProcessInputFile(
+	// Read all the lines from the input file. Format those lines to spec, and then output it into the target array.
+	
+	char out_lines[OUTPUT_COUNT][OUTPUT_LENGTH],
+	int vendor_count,
+	char vendor_addresses[V_COUNT][V_ADDRESS_LENGTH],
+	char vendor_names[V_COUNT][V_NAME_LENGTH],
+	char output_address[OUTPUT_COUNT][V_ADDRESS_LENGTH], 
+	int output_size[OUTPUT_COUNT])
+{
+	int line_index = 0;
+	while (*output_address[line_index] != NULL_CHAR)
+	{
+		char* full_address = output_address[line_index];
+		char* vendor_name = GetVendorName(full_address, vendor_count, vendor_addresses, vendor_names);
+		char buffer[20];
+		sprintf(buffer, "%d", output_size[line_index]);
 		char* output_pointer = out_lines[line_index];
 
 		if (vendor_count == 0)
-			ProcessSimplePackage(package_size, full_address, &output_pointer);
+			ProcessSimplePackage(buffer, full_address, &output_pointer);
 		else
-			ProcessNamedPackage(package_size, vendor_name, partial_address, &output_pointer);
+			ProcessNamedPackage(buffer, vendor_name, full_address, &output_pointer);
 
 		line_index++;
 	}
-
 	return line_index;
 }
 
 int main(int argc, char* argv[])
 {
 	int exit_code = EXIT_SUCCESS;
+
+	// Vendor name information.
 	char vendor_addresses[V_COUNT][V_ADDRESS_LENGTH];
 	char vendor_names[V_COUNT][V_NAME_LENGTH];
-	char out_lines[OUTPUT_COUNT][OUTPUT_LENGTH];
 	int vendor_count = 0;
 
+	// Arrays for all the output information.
+	char output_address[OUTPUT_COUNT][V_ADDRESS_LENGTH];
+	int output_size[OUTPUT_COUNT];
+	char out_lines[OUTPUT_COUNT][OUTPUT_LENGTH];
+	
+	// If the 4th argv is provided, then extract the vendor name from the OUI file.
 	if (argc == 4)
 	{
 		vendor_count = ExtractVendorInfo(argv, vendor_addresses, vendor_names);
 	}
 
+	// Default invocation: The 1st arg is the transmit type (t or r) and the 2nd arg is the input file to read.
 	if (argc >= 3)
 	{
 		char* input_file = argv[2];
 		char d_type = argv[1][0];
 
-		int line_index = ProcessInputFile(input_file, d_type, out_lines, vendor_count, vendor_addresses, vendor_names);
-		CopyOutputToFile(out_lines, line_index);
+		SumInputPackets(input_file, d_type, vendor_count, output_address, output_size);
+		ProcessInputFile(out_lines, vendor_count, vendor_addresses, vendor_names, output_address, output_size);
+		CopyOutputToFile(out_lines);
 		SortResults(vendor_count);
 		DeleteTempFile();
 	}
