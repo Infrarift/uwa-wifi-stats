@@ -205,31 +205,30 @@ char* AddTabToOutput(char* str)
 	return ++str;
 }
 
-void AddLineEnding(char** output_pointer)
+void AddLineEnding(char* output_pointer)
 {
 	// Add a new line char, and a null char to this string.
-	**output_pointer = '\n';
-	**output_pointer++;
-	**output_pointer = NULL_CHAR;
+	*output_pointer++ = '\n';
+	*output_pointer = NULL_CHAR;
 }
 
-void ProcessSimplePackage(char* package_size, char* full_address, char** output_pointer)
+void ProcessSimplePackage(char* package_size, char* full_address, char* output_pointer)
 {
 	// Format a single line of a package, without vendor name.
-	*output_pointer = CopyStringToOutput(full_address, *output_pointer);
-	*output_pointer = AddTabToOutput(*output_pointer);
-	*output_pointer = CopyStringToOutput(package_size, *output_pointer);
+	output_pointer = CopyStringToOutput(full_address, output_pointer);
+	output_pointer = AddTabToOutput(output_pointer);
+	output_pointer = CopyStringToOutput(package_size, output_pointer);
 	AddLineEnding(output_pointer);
 }
 
-void ProcessNamedPackage(char* package_size, char* vendor_name, char partial_address[9], char** output_pointer)
+void ProcessNamedPackage(char* package_size, char* vendor_name, char partial_address[9], char* output_pointer)
 {
 	// Format a single line of a package, with vendor name.
-	*output_pointer = CopyStringToOutput(partial_address, *output_pointer);
-	*output_pointer = AddTabToOutput(*output_pointer);
-	*output_pointer = CopyStringToOutput(vendor_name, *output_pointer);
-	*output_pointer = AddTabToOutput(*output_pointer);
-	*output_pointer = CopyStringToOutput(package_size, *output_pointer);
+	output_pointer = CopyStringToOutput(partial_address, output_pointer);
+	output_pointer = AddTabToOutput(output_pointer);
+	output_pointer = CopyStringToOutput(vendor_name, output_pointer);
+	output_pointer = AddTabToOutput(output_pointer);
+	output_pointer = CopyStringToOutput(package_size, output_pointer);
 	AddLineEnding(output_pointer);
 }
 
@@ -308,9 +307,9 @@ int ProcessInputFile(
 		char* output_pointer = output_lines[line_index];
 
 		if (vendor_count == 0)
-			ProcessSimplePackage(buffer, mac_address, &output_pointer);
+			ProcessSimplePackage(buffer, mac_address, output_pointer);
 		else
-			ProcessNamedPackage(buffer, vendor_name, mac_address, &output_pointer);
+			ProcessNamedPackage(buffer, vendor_name, mac_address, output_pointer);
 
 		line_index++;
 	}
