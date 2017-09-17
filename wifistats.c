@@ -79,20 +79,23 @@ char* GetVendorAddress(char* full_address, char* partial_address, bool format)
 	return partial_address;
 }
 
-char* GetVendorName(char* full_address, int vendor_count, char vendor_addresses[V_COUNT][V_ADDRESS_LENGTH], char vendor_names[V_COUNT][V_NAME_LENGTH])
+int GetVendorIndex(char* full_address, int vendor_count, char vendor_addresses[V_COUNT][V_ADDRESS_LENGTH])
 {
-	// Find the matching vendor name for a given vendor address. If not found, will return UNKNOWN-VENDOR.
-	char* name = UNKNOWN_VENDOR;
 	char partial_address[9];
 	GetVendorAddress(full_address, partial_address, true);
-
 	for (int i = 0; i < vendor_count; i++)
 	{
 		if (Compare(partial_address, vendor_addresses[i]) == true)
-			return vendor_names[i];
+			return i;
 	}
+	return -1;
+}
 
-	return name;
+char* GetVendorName(char* full_address, int vendor_count, char vendor_addresses[V_COUNT][V_ADDRESS_LENGTH], char vendor_names[V_COUNT][V_NAME_LENGTH])
+{
+	// Find the matching vendor name for a given vendor address. If not found, will return UNKNOWN-VENDOR.
+	int address_index = GetVendorIndex(full_address, vendor_count, vendor_addresses);
+	return address_index == -1 ? UNKNOWN_VENDOR : vendor_names[address_index];
 }
 
 void Trim(char* target_string)
@@ -222,8 +225,7 @@ void ProcessSimplePackage(char* package_size, char* full_address, char** output_
 void ProcessNamedPackage(char* package_size, char* vendor_name, char partial_address[9], char** output_pointer)
 {
 	// Format a single line of a package, with vendor name.
-	char* vendor_address = vendor_name == UNKNOWN_VENDOR ? UNKNOWN_ADDRESS : partial_address;
-	*output_pointer = CopyStringToOutput(vendor_address, *output_pointer);
+	*output_pointer = CopyStringToOutput(partial_address, *output_pointer);
 	*output_pointer = AddTabToOutput(*output_pointer);
 	*output_pointer = CopyStringToOutput(vendor_name, *output_pointer);
 	*output_pointer = AddTabToOutput(*output_pointer);
@@ -252,7 +254,7 @@ void AddToOutputAddress(char* full_address, int package_size, char output_addres
 	}
 }
 
-void SumInputPackets(char* file_name, char device_type, int vendor_count, char output_address[OUTPUT_COUNT][V_ADDRESS_LENGTH], int output_size[OUTPUT_COUNT])
+void SumInputPackets(char* file_name, char device_type, int vendor_count, char vendor_addresses[V_COUNT][V_ADDRESS_LENGTH], char output_address[OUTPUT_COUNT][V_ADDRESS_LENGTH], int output_size[OUTPUT_COUNT])
 {
 	// Initialize all address and packet size values to default.
 	for (int i = 0; i < OUTPUT_COUNT; i++)
@@ -280,37 +282,35 @@ void SumInputPackets(char* file_name, char device_type, int vendor_count, char o
 		if (vendor_count != 0)
 		{
 			char partial_address[9];
-			GetVendorAddress(full_address, partial_address, false);
-			full_address = partial_address;
+			int vendor_index = GetVendorIndex(full_address, vendor_count, vendor_addresses);
+			full_address = vendor_index == -1 ? UNKNOWN_ADDRESS : GetVendorAddress(full_address, partial_address, false);
 		}
-
 		AddToOutputAddress(full_address, atoi(package_size), output_address, output_size);
 	}
 }
 
 int ProcessInputFile(
 	// Read all the lines from the input file. Format those lines to spec, and then output it into the target array.
-	
-	char out_lines[OUTPUT_COUNT][OUTPUT_LENGTH],
+	char output_lines[OUTPUT_COUNT][OUTPUT_LENGTH],
 	int vendor_count,
 	char vendor_addresses[V_COUNT][V_ADDRESS_LENGTH],
 	char vendor_names[V_COUNT][V_NAME_LENGTH],
-	char output_address[OUTPUT_COUNT][V_ADDRESS_LENGTH], 
-	int output_size[OUTPUT_COUNT])
+	char output_mac[OUTPUT_COUNT][V_ADDRESS_LENGTH], 
+	int output_packet[OUTPUT_COUNT])
 {
 	int line_index = 0;
-	while (*output_address[line_index] != NULL_CHAR)
+	while (*output_mac[line_index] != NULL_CHAR)
 	{
-		char* full_address = output_address[line_index];
-		char* vendor_name = GetVendorName(full_address, vendor_count, vendor_addresses, vendor_names);
+		char* mac_address = output_mac[line_index];
+		char* vendor_name = GetVendorName(mac_address, vendor_count, vendor_addresses, vendor_names);
 		char buffer[20];
-		sprintf(buffer, "%d", output_size[line_index]);
-		char* output_pointer = out_lines[line_index];
+		sprintf(buffer, "%d", output_packet[line_index]);
+		char* output_pointer = output_lines[line_index];
 
 		if (vendor_count == 0)
-			ProcessSimplePackage(buffer, full_address, &output_pointer);
+			ProcessSimplePackage(buffer, mac_address, &output_pointer);
 		else
-			ProcessNamedPackage(buffer, vendor_name, full_address, &output_pointer);
+			ProcessNamedPackage(buffer, vendor_name, mac_address, &output_pointer);
 
 		line_index++;
 	}
@@ -319,7 +319,7 @@ int ProcessInputFile(
 
 int main(int argc, char* argv[])
 {
-	int exit_code = EXIT_SUCCESS;
+	int exit_code = EXIT_FAILURE;
 
 	// Vendor name information.
 	char vendor_addresses[V_COUNT][V_ADDRESS_LENGTH];
@@ -327,9 +327,9 @@ int main(int argc, char* argv[])
 	int vendor_count = 0;
 
 	// Arrays for all the output information.
-	char output_address[OUTPUT_COUNT][V_ADDRESS_LENGTH];
-	int output_size[OUTPUT_COUNT];
-	char out_lines[OUTPUT_COUNT][OUTPUT_LENGTH];
+	char output_mac[OUTPUT_COUNT][V_ADDRESS_LENGTH];
+	int output_packet[OUTPUT_COUNT];
+	char output_lines[OUTPUT_COUNT][OUTPUT_LENGTH];
 	
 	// If the 4th argv is provided, then extract the vendor name from the OUI file.
 	if (argc == 4)
@@ -341,14 +341,15 @@ int main(int argc, char* argv[])
 	if (argc >= 3)
 	{
 		char* input_file = argv[2];
-		char d_type = argv[1][0];
+		char device_type = argv[1][0];
 
-		SumInputPackets(input_file, d_type, vendor_count, output_address, output_size);
-		ProcessInputFile(out_lines, vendor_count, vendor_addresses, vendor_names, output_address, output_size);
-		CopyOutputToFile(out_lines);
+		SumInputPackets(input_file, device_type, vendor_count, vendor_addresses, output_mac, output_packet);
+		ProcessInputFile(output_lines, vendor_count, vendor_addresses, vendor_names, output_mac, output_packet);
+		CopyOutputToFile(output_lines);
 		SortResults(vendor_count);
 		DeleteTempFile();
-	}
 
+		exit_code = EXIT_SUCCESS;
+	}
 	return exit_code;
 }
