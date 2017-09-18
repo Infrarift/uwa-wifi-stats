@@ -85,7 +85,7 @@ int GetVendorIndex(char* full_address, int vendor_count, char vendor_addresses[V
 	GetVendorAddress(full_address, partial_address, true);
 	for (int i = 0; i < vendor_count; i++)
 	{
-		if (Compare(partial_address, vendor_addresses[i]) == true)
+		if (Compare(partial_address, vendor_addresses[i]))
 			return i;
 	}
 	return -1;
@@ -245,7 +245,7 @@ void AddToOutputAddress(char* full_address, int package_size, char output_addres
 			break;
 		}
 
-		if (Compare(address, full_address) == true)
+		if (Compare(address, full_address))
 		{
 			output_package[i] += package_size;
 			break;
@@ -272,10 +272,11 @@ void SumInputPackets(char* file_name, char device_type, int vendor_count, char v
 		char* transmit_address = array[1];
 		char* receive_address = array[2];
 		char* package_size = array[3];
-
+        
+        if (Compare(receive_address, BROADCAST_ADDRESS))
+            continue;
+        
 		char* full_address = device_type == TRANSMIT_DEVICE ? transmit_address : receive_address;
-		if (Compare(full_address, BROADCAST_ADDRESS) == true)
-			continue;
 
 		// If we have vendor names, use the partial address. Otherwise use the full address.
 		if (vendor_count != 0)
