@@ -1,0 +1,49 @@
+??:??:??	UNKNOWN-VENDOR	1024106
+74:86:0b	Cisco Systems Inc.	859104
+84:1b:5e	Netgear	847391
+70:70:8b	Cisco Systems Inc.	847134
+74:e2:f5	Apple	844045
+48:ad:08	Huawei Technologies Co. Ltd	840014
+64:59:f8	Vodafone Omnitel B.V.	622417
+64:9a:12	P2 Mobile Technologies Limited	584679
+00:13:8f	Asiarock Technology Limited	561520
+08:2c:b0	Network Instruments	539107
+c0:dc:6a	Qingdao Eastsoft Communication Technology Co. Ltd	533406
+dc:3c:f6	Atomic Rules LLC	508448
+00:1a:62	Data Robotics, Incorporated	506844
+00:1b:ab	Telchemy, Incorporated	494309
+00:09:35	Sandvine Incorporated	467382
+bc:5f:f4	ASRock Incorporation	449887
+08:3a:5c	Junilab, Inc.	435357
+00:60:9c	Perkin-Elmer Incorporated	434687
+00:03:15	Cidco Incorporated	430412
+00:19:3c	HighPoint Technologies Incorporated	413482
+cc:3a:61	Samsung Electro Mechanics Co. Ltd	410178
+00:0e:fa	Optoway Technology Incorporation	409277
+00:11:32	Synology Incorporated	389615
+30:d4:6a	Autosales Incorporated	386950
+48:50:73	Microsoft Corporation	384137
+a4:24:dd	Cambrionix Ltd	368483
+88:1b:99	Shenzhen XIN FEI JIA Electronic Co. Ltd	363030
+3c:31:78	Qolsys Inc.	361748
+00:0b:6a	Asiarock Technology Limited	354846
+00:0f:ee	XTec, Incorporated	352945
+00:30:35	Corning Incorporated	352280
+00:17:8b	Teledyne Technologies Incorporated	340715
+14:49:78	Digital Control Incorporated	333089
+f8:46:2d	SYNTEC Incorporation	327863
+8c:fd:f0	Qualcomm Inc.	315274
+00:0f:37	Xambala Incorporated	314362
+24:69:3e	innodisk Corporation	311230
+00:1a:bb	Fontal Technology Incorporation	305716
+68:12:95	Lupine Lighting Systems GmbH	304424
+e4:c2:d1	Huawei Technologies Co. Ltd	301397
+4c:ae:31	ShengHai Electronics (Shenzhen) Ltd	281105
+00:11:d9	TiVo	277407
+3c:a3:1a	Oilfind International LLC	273127
+f0:d6:57	Echosens	251720
+00:50:69	PixStream Incorporated	248601
+00:0c:7e	Tellium Incorporated	183645
+00:01:24	Acer Incorporated	176601
+00:25:22	ASRock Incorporation	168708
+e4:8d:8c	Routerboard.com	97692
