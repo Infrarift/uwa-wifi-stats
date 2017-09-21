@@ -2,7 +2,7 @@
 CITS2002 Project 1 2017
 Name(s):             Jakrin Juangbhanich
 Student number(s):   21789272
-Date:                18/9/2017
+Date:                22/9/2017
 */
 
 #include <stdlib.h>
@@ -46,16 +46,7 @@ void Split(char* string, const char* delimiter, char* array[])
 bool Compare(char* string1, char* string2)
 {
 	// Compare if two strings have equal value.
-	int i = 0;
-	while (string1[i] != NULL_CHAR)
-	{
-		if (string1[i] != string2[i])
-		{
-			return false;
-		}
-		i++;
-	}
-	return string2[i] == NULL_CHAR ? true : false;
+	return strcmp(string1, string2) == 0 ? true : false;
 }
 
 char* GetVendorAddress(char* full_address, char* partial_address, bool format)
